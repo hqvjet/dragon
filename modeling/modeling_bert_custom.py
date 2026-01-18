@@ -38,10 +38,33 @@ from transformers.modeling_outputs import (
 )
 from transformers.modeling_utils import (
     PreTrainedModel,
-    apply_chunking_to_forward,
     find_pruneable_heads_and_indices,
     prune_linear_layer,
 )
+
+# apply_chunking_to_forward was moved/removed in newer transformers
+try:
+    from transformers.modeling_utils import apply_chunking_to_forward
+except ImportError:
+    # Fallback: define it ourselves
+    def apply_chunking_to_forward(forward_fn, chunk_size, chunk_dim, *input_tensors):
+        """
+        Simple implementation of apply_chunking_to_forward for compatibility.
+        """
+        if chunk_size > 0:
+            # Chunk the input
+            chunks = [tensor.split(chunk_size, dim=chunk_dim) for tensor in input_tensors]
+            # Apply forward to each chunk
+            outputs = []
+            for chunk_inputs in zip(*chunks):
+                output = forward_fn(*chunk_inputs)
+                outputs.append(output)
+            # Concatenate outputs
+            return torch.cat(outputs, dim=chunk_dim)
+        else:
+            # No chunking
+            return forward_fn(*input_tensors)
+
 from transformers.utils import logging
 logger = logging.get_logger(__name__)
 

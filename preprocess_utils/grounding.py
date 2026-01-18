@@ -127,13 +127,21 @@ def ground_qa_pair(qa_pair):
 
     s, a = qa_pair
     all_concepts = ground_mentioned_concepts(nlp, matcher, s, a)
-    answer_concepts = ground_mentioned_concepts(nlp, matcher, a)
-    question_concepts = all_concepts - answer_concepts
-    if len(question_concepts) == 0:
-        question_concepts = hard_ground(nlp, s, CPNET_VOCAB)  # not very possible
+    
+    # For binary classification (a is empty), all concepts are question concepts
+    if a.strip() == "":
+        question_concepts = all_concepts
+        answer_concepts = set()
+    else:
+        # QA format: separate question and answer concepts
+        answer_concepts = ground_mentioned_concepts(nlp, matcher, a)
+        question_concepts = all_concepts - answer_concepts
+        if len(question_concepts) == 0:
+            question_concepts = hard_ground(nlp, s, CPNET_VOCAB)  # not very possible
 
-    if len(answer_concepts) == 0:
-        answer_concepts = hard_ground(nlp, a, CPNET_VOCAB)  # some case
+        # Only do hard grounding if answer is not empty
+        if len(answer_concepts) == 0 and a.strip():
+            answer_concepts = hard_ground(nlp, a, CPNET_VOCAB)  # some case
 
     # question_concepts = question_concepts -  answer_concepts
     question_concepts = sorted(list(question_concepts))
@@ -150,7 +158,9 @@ def ground_mentioned_concepts(nlp, matcher, s, ans=None):
     mentioned_concepts = set()
     span_to_concepts = {}
 
-    if ans is not None:
+    # Only filter by answer if answer is not empty (QA format)
+    # For binary classification, ans will be empty string
+    if ans is not None and ans.strip() != "":
         ans_matcher = Matcher(nlp.vocab)
         ans_words = nlp(ans)
         # print(ans_words)
@@ -160,9 +170,12 @@ def ground_mentioned_concepts(nlp, matcher, s, ans=None):
         ans_mentions = set()
         for _, ans_start, ans_end in ans_match:
             ans_mentions.add((ans_start, ans_end))
+    else:
+        ans_mentions = set()  # Empty for binary classification
 
     for match_id, start, end in matches:
-        if ans is not None:
+        # Only skip if we have answer mentions (QA format)
+        if ans is not None and ans.strip() != "":
             if (start, end) in ans_mentions:
                 continue
 
@@ -339,14 +352,23 @@ def ground(statement_path, cpnet_vocab_path, pattern_path, output_path, num_proc
         for statement in j["statements"]:
             sents.append(statement["statement"])
 
-        for answer in j["question"]["choices"]:
-            ans = answer['text']
-            # ans = " ".join(answer['text'].split("_"))
-            try:
-                assert all([i != "_" for i in ans])
-            except Exception:
-                print(ans)
-            answers.append(ans)
+        # Handle both QA format (with choices) and Binary Classification (no choices)
+        choices = j["question"].get("choices", [])
+        if choices:
+            # QA format: multiple choices
+            for answer in choices:
+                ans = answer['text']
+                # ans = " ".join(answer['text'].split("_"))
+                try:
+                    assert all([i != "_" for i in ans])
+                except Exception:
+                    print(ans)
+                answers.append(ans)
+        else:
+            # Binary classification: no choices, use empty string for each statement
+            # This makes grounding extract concepts only from the statement itself
+            for _ in j["statements"]:
+                answers.append("")
 
     res = match_mentioned_concepts(sents, answers, num_processes)
     res = prune(res, cpnet_vocab_path)

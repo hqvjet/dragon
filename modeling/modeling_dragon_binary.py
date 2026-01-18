@@ -35,7 +35,7 @@ Author: Adapted from DRAGON (Yasunaga et al., 2022)
 
 import torch
 import torch.nn as nn
-from modeling.modeling_dragon import DRAGON, LMDRAGONDataLoader
+from modeling.modeling_dragon import DRAGON
 from transformers import AutoModel, AutoTokenizer
 
 
@@ -192,44 +192,14 @@ class DRAGONBinaryClassifier(nn.Module):
         print("🔥 GNN unfrozen")
 
 
-class DRAGONBinaryDataLoader(LMDRAGONDataLoader):
+class DRAGONBinaryDataLoader(nn.Module):
     """
     DataLoader cho Binary Classification với DRAGON.
     
-    Kế thừa từ LMDRAGONDataLoader nhưng đơn giản hóa cho binary labels.
+    NOTE: Thực tế không cần class này vì data_utils.DRAGON_DataLoader đã support binary.
+    Giữ lại để tương thích với code docs.
     """
-    
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-    
-    def __getitem__(self, index):
-        """
-        Override để trả về binary label thay vì QA format.
-        
-        Returns:
-            Tuple containing:
-                - input_ids: Token IDs
-                - attention_mask: Attention mask
-                - token_type_ids: Segment IDs (nếu có)
-                - concept_ids: Concept IDs từ graph
-                - node_type_ids: Node types
-                - adj: Adjacency matrix
-                - label: Binary label (0 or 1)
-        """
-        # Get data từ parent class
-        data = super().__getitem__(index)
-        
-        # Parent trả về QA format, ta cần extract label
-        # Thường label nằm ở cuối tuple
-        *inputs, label = data
-        
-        # Đảm bảo label là binary (0 hoặc 1)
-        if isinstance(label, torch.Tensor):
-            label = label.long()
-        else:
-            label = torch.tensor(label, dtype=torch.long)
-        
-        return (*inputs, label)
+    pass
 
 
 def create_optimizer_grouped_parameters(model, args):

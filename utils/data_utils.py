@@ -9,11 +9,42 @@ import numpy as np
 
 from tqdm import tqdm
 from typing import Any, Callable, Dict, List, NewType, Optional, Tuple, Union
-from transformers import (OPENAI_GPT_PRETRAINED_CONFIG_ARCHIVE_MAP, BERT_PRETRAINED_CONFIG_ARCHIVE_MAP,
-                          XLNET_PRETRAINED_CONFIG_ARCHIVE_MAP, ROBERTA_PRETRAINED_CONFIG_ARCHIVE_MAP)
+
+# Old archive maps were removed in newer transformers
+# Define them manually based on known model names
+try:
+    from transformers import (OPENAI_GPT_PRETRAINED_CONFIG_ARCHIVE_MAP, BERT_PRETRAINED_CONFIG_ARCHIVE_MAP,
+                              XLNET_PRETRAINED_CONFIG_ARCHIVE_MAP, ROBERTA_PRETRAINED_CONFIG_ARCHIVE_MAP)
+except ImportError:
+    # Fallback: define manually
+    OPENAI_GPT_PRETRAINED_CONFIG_ARCHIVE_MAP = {
+        'openai-gpt': 'https://huggingface.co/openai-gpt',
+    }
+    BERT_PRETRAINED_CONFIG_ARCHIVE_MAP = {
+        'bert-base-uncased': 'https://huggingface.co/bert-base-uncased',
+        'bert-large-uncased': 'https://huggingface.co/bert-large-uncased',
+        'bert-base-cased': 'https://huggingface.co/bert-base-cased',
+        'bert-large-cased': 'https://huggingface.co/bert-large-cased',
+    }
+    XLNET_PRETRAINED_CONFIG_ARCHIVE_MAP = {
+        'xlnet-base-cased': 'https://huggingface.co/xlnet-base-cased',
+        'xlnet-large-cased': 'https://huggingface.co/xlnet-large-cased',
+    }
+    ROBERTA_PRETRAINED_CONFIG_ARCHIVE_MAP = {
+        'roberta-base': 'https://huggingface.co/roberta-base',
+        'roberta-large': 'https://huggingface.co/roberta-large',
+    }
+
 from transformers import (OpenAIGPTTokenizer, BertTokenizer, BertTokenizerFast, XLNetTokenizer, RobertaTokenizer, RobertaTokenizerFast)
 try:
     from transformers import ALBERT_PRETRAINED_CONFIG_ARCHIVE_MAP
+except ImportError:
+    ALBERT_PRETRAINED_CONFIG_ARCHIVE_MAP = {
+        'albert-base-v2': 'https://huggingface.co/albert-base-v2',
+        'albert-large-v2': 'https://huggingface.co/albert-large-v2',
+    }
+
+try:
     from transformers import AlbertTokenizer
 except:
     pass

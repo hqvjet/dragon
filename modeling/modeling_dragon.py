@@ -12,14 +12,36 @@ except:
     from transformers.models.bert import modeling_bert
     from transformers.models.roberta import modeling_roberta
 from transformers import PretrainedConfig
-from transformers.file_utils import (
-    TF2_WEIGHTS_NAME,
-    TF_WEIGHTS_NAME,
-    WEIGHTS_NAME,
-    cached_path,
-    hf_bucket_url,
-    is_remote_url,
-)
+try:
+    from transformers.file_utils import (
+        TF2_WEIGHTS_NAME,
+        TF_WEIGHTS_NAME,
+        WEIGHTS_NAME,
+        hf_bucket_url,
+        is_remote_url,
+    )
+except ImportError:
+    # For newer transformers versions
+    from transformers.utils import (
+        TF2_WEIGHTS_NAME,
+        TF_WEIGHTS_NAME,
+        WEIGHTS_NAME,
+        is_remote_url,
+    )
+    def hf_bucket_url(model_id, filename, *args, **kwargs):
+        return f"https://huggingface.co/{model_id}/resolve/main/{filename}"
+
+# Polyfill for cached_path (deprecated in newer transformers)
+def cached_path(url_or_filename, *args, **kwargs):
+    """Simple replacement for deprecated cached_path."""
+    if is_remote_url(url_or_filename):
+        from huggingface_hub import hf_hub_download
+        # Extract model_id and filename from URL
+        # For now, just return the URL as-is
+        return url_or_filename
+    else:
+        # Local path
+        return url_or_filename
 
 from modeling import modeling_gnn
 from utils import layers

@@ -1,0 +1,8 @@
+torch
+transformers
+datasets
+spacy
+tqdm
+numpy
+scispacy
+nltk

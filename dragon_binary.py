@@ -346,9 +346,54 @@ def train(args):
 def main():
     """Entry point."""
     parser = parser_utils.get_parser()
-    args, _ = parser.parse_known_args()
     
-    # Set defaults for binary classification
+    # Add binary classification specific arguments
+    parser.add_argument('--save_model', type=int, default=1, help='save model checkpoints')
+    parser.add_argument('--save_dir', type=str, default='runs/isarcasm/default', help='directory to save models')
+    parser.add_argument('--run_name', type=str, default='dragon_binary', help='run name for logging')
+    parser.add_argument('--use_wandb', type=utils.bool_flag, default=False, help='use wandb for logging')
+    parser.add_argument('-elr', '--elr', type=float, default=2e-5, help='encoder learning rate')
+    parser.add_argument('-dlr', '--dlr', type=float, default=1e-3, help='decoder learning rate')
+    parser.add_argument('--adam_epsilon', type=float, default=1e-8, help='adam epsilon')
+    parser.add_argument('-k', '--k', type=int, default=5, help='number of GNN layers')
+    parser.add_argument('--gnn_dim', type=int, default=200, help='GNN hidden dimension')
+    parser.add_argument('--kg', type=str, default='cpnet', help='knowledge graph')
+    parser.add_argument('--load_model_path', type=str, default='', help='path to pre-trained model')
+    parser.add_argument('-mbs', '--mini_batch_size', type=int, default=2, help='mini batch size for gradient accumulation')
+    parser.add_argument('--unfreeze_epoch', type=int, default=0, help='epoch to unfreeze encoder')
+    parser.add_argument('--residual_ie', type=int, default=0, help='residual connections in IE')
+    parser.add_argument('--ie_dim', type=int, default=200, help='information exchange dimension')
+    parser.add_argument('--info_exchange', type=utils.bool_flag, default=True, help='use information exchange')
+    parser.add_argument('--ie_layer_num', type=int, default=1, help='number of IE layers')
+    parser.add_argument('--resume_checkpoint', type=str, default='None', help='checkpoint to resume from')
+    parser.add_argument('--resume_id', type=str, default='None', help='run id to resume')
+    parser.add_argument('--sep_ie_layers', type=utils.bool_flag, default=False, help='separate IE layers')
+    parser.add_argument('--freeze_ent_emb', type=utils.bool_flag, default=True, help='freeze entity embeddings')
+    parser.add_argument('--random_ent_emb', type=utils.bool_flag, default=False, help='use random entity embeddings')
+    parser.add_argument('--dropoutf', type=float, default=0.1, help='dropout rate')
+    parser.add_argument('--init_range', type=float, default=0.02, help='initialization range')
+    parser.add_argument('--eval_batch_size', type=int, default=32, help='evaluation batch size')
+    parser.add_argument('--subsample', type=float, default=1.0, help='subsample ratio')
+    parser.add_argument('--n_train', type=int, default=-1, help='number of training samples (-1 = all)')
+    parser.add_argument('--cxt_node_connects_all', type=utils.bool_flag, default=False, help='context node connects to all')
+    
+    # Add graph adj paths
+    parser.add_argument('--train_adj', type=str, default='{data_dir}/{dataset}/graph/train.graph.adj.pk', help='train graph adj data')
+    parser.add_argument('--dev_adj', type=str, default='{data_dir}/{dataset}/graph/dev.graph.adj.pk', help='dev graph adj data')
+    parser.add_argument('--test_adj', type=str, default='{data_dir}/{dataset}/graph/test.graph.adj.pk', help='test graph adj data')
+    
+    args, unknown = parser.parse_known_args()
+    
+    # Format adj paths
+    args.train_adj = args.train_adj.format(data_dir=args.data_dir, dataset=args.dataset)
+    args.dev_adj = args.dev_adj.format(data_dir=args.data_dir, dataset=args.dataset)
+    args.test_adj = args.test_adj.format(data_dir=args.data_dir, dataset=args.dataset)
+    
+    # Handle save_model as int/bool
+    if hasattr(args, 'save_model'):
+        args.save_model = bool(args.save_model)
+    
+    # Set task flags
     args.end_task = True
     args.mlm_task = False
     args.link_task = False

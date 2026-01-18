@@ -1,6 +1,7 @@
 import networkx as nx
 import nltk
 import json
+import pickle
 from tqdm import tqdm
 import numpy as np
 
@@ -206,7 +207,9 @@ def construct_graph(cpnet_csv_path, cpnet_vocab_path, output_path, prune=True):
                 graph.add_edge(obj, subj, rel=rel + len(relation2id), weight=weight)
                 attrs.add((obj, subj, rel + len(relation2id)))
 
-    nx.write_gpickle(graph, output_path)
+    # nx.write_gpickle is deprecated in networkx 3.x, use pickle instead
+    with open(output_path, 'wb') as f:
+        pickle.dump(graph, f, pickle.HIGHEST_PROTOCOL)
     print(f"graph file saved to {output_path}")
     print()
 

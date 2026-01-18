@@ -8,6 +8,11 @@ from .conceptnet import merged_relations
 import numpy as np
 from scipy import sparse
 import pickle
+
+def load_cpnet_graph(path):
+    """Load graph from pickle file (compatible with networkx 3.x)"""
+    with open(path, 'rb') as f:
+        return pickle.load(f)
 from scipy.sparse import csr_matrix, coo_matrix
 from multiprocessing import Pool
 from collections import OrderedDict
@@ -38,7 +43,7 @@ def load_resources(cpnet_vocab_path):
 
 def load_cpnet(cpnet_graph_path):
     global cpnet, cpnet_simple
-    cpnet = nx.read_gpickle(cpnet_graph_path)
+    cpnet = load_cpnet_graph(cpnet_graph_path)
     cpnet_simple = nx.Graph()
     for u, v, data in cpnet.edges(data=True):
         w = data['weight'] if 'weight' in data else 1.0
@@ -389,7 +394,7 @@ def generate_adj_matrices(ori_schema_graph_path, cpnet_graph_path, cpnet_vocab_p
 
     global cpnet_all
     if cpnet_all is None:
-        cpnet_all = nx.read_gpickle(cpnet_graph_path)
+        cpnet_all = load_cpnet_graph(cpnet_graph_path)
 
     with open(ori_schema_graph_path, 'r') as fin:
         nxg_strs = [line for line in fin]

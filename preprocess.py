@@ -2,6 +2,7 @@ import argparse
 from multiprocessing import cpu_count
 from preprocess_utils.convert_csqa import convert_to_entailment
 from preprocess_utils.convert_obqa import convert_to_obqa_statement
+from preprocess_utils.convert_isarcasm import convert_isarcasm_to_dragon
 from preprocess_utils.conceptnet import extract_english, construct_graph
 from preprocess_utils.umls import construct_graph_umls
 from preprocess_utils.grounding import create_matcher_patterns, ground
@@ -124,6 +125,31 @@ for dname in ['medqa']:
         },
     }
 
+# Add iSarcasm dataset paths
+for dname in ['isarcasm']:
+    input_paths[dname] = {
+        'train': f'./data/{dname}/train.jsonl',
+        'dev':   f'./data/{dname}/dev.jsonl',
+        'test':  f'./data/{dname}/test.jsonl',
+    }
+    output_paths[dname] = {
+        'statement': {
+            'train': f'./data/{dname}/statement/train.statement.jsonl',
+            'dev':   f'./data/{dname}/statement/dev.statement.jsonl',
+            'test':  f'./data/{dname}/statement/test.statement.jsonl',
+        },
+        'grounded': {
+            'train': f'./data/{dname}/grounded/train.grounded.jsonl',
+            'dev':   f'./data/{dname}/grounded/dev.grounded.jsonl',
+            'test':  f'./data/{dname}/grounded/test.grounded.jsonl',
+        },
+        'graph': {
+            'adj-train': f'./data/{dname}/graph/train.graph.adj.pk',
+            'adj-dev':   f'./data/{dname}/graph/dev.graph.adj.pk',
+            'adj-test':  f'./data/{dname}/graph/test.graph.adj.pk',
+        },
+    }
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -203,6 +229,26 @@ def main():
             {'func': generate_adj_data_from_grounded_concepts_umls__use_glove, 'args': (output_paths['medqa']['grounded']['dev'], output_paths['umls']['graph'], output_paths['umls']['vocab'], output_paths['medqa']['graph']['adj-dev'], args.nprocs)},
             {'func': generate_adj_data_from_grounded_concepts_umls__use_glove, 'args': (output_paths['medqa']['grounded']['test'], output_paths['umls']['graph'], output_paths['umls']['vocab'], output_paths['medqa']['graph']['adj-test'], args.nprocs)},
             {'func': generate_adj_data_from_grounded_concepts_umls__use_glove, 'args': (output_paths['medqa']['grounded']['train'], output_paths['umls']['graph'], output_paths['umls']['vocab'], output_paths['medqa']['graph']['adj-train'], args.nprocs)},
+        ],
+
+        'isarcasm': [
+            # First download and convert from HuggingFace
+            {'func': convert_isarcasm_to_dragon, 'args': ('./data/isarcasm',)},
+            # Then copy to statement folder (already in correct format)
+            {'func': lambda src, dst: __import__('shutil').copy(src, dst), 'args': (input_paths['isarcasm']['train'], output_paths['isarcasm']['statement']['train'])},
+            {'func': lambda src, dst: __import__('shutil').copy(src, dst), 'args': (input_paths['isarcasm']['dev'], output_paths['isarcasm']['statement']['dev'])},
+            {'func': lambda src, dst: __import__('shutil').copy(src, dst), 'args': (input_paths['isarcasm']['test'], output_paths['isarcasm']['statement']['test'])},
+            # Ground concepts with ConceptNet
+            {'func': ground, 'args': (output_paths['isarcasm']['statement']['train'], output_paths['cpnet']['vocab'],
+                                      output_paths['cpnet']['patterns'], output_paths['isarcasm']['grounded']['train'], args.nprocs)},
+            {'func': ground, 'args': (output_paths['isarcasm']['statement']['dev'], output_paths['cpnet']['vocab'],
+                                      output_paths['cpnet']['patterns'], output_paths['isarcasm']['grounded']['dev'], args.nprocs)},
+            {'func': ground, 'args': (output_paths['isarcasm']['statement']['test'], output_paths['cpnet']['vocab'],
+                                      output_paths['cpnet']['patterns'], output_paths['isarcasm']['grounded']['test'], args.nprocs)},
+            # Generate graph adjacency data
+            {'func': generate_adj_data_from_grounded_concepts__use_LM, 'args': (output_paths['isarcasm']['grounded']['train'], output_paths['cpnet']['pruned-graph'], output_paths['cpnet']['vocab'], output_paths['isarcasm']['graph']['adj-train'], args.nprocs)},
+            {'func': generate_adj_data_from_grounded_concepts__use_LM, 'args': (output_paths['isarcasm']['grounded']['dev'], output_paths['cpnet']['pruned-graph'], output_paths['cpnet']['vocab'], output_paths['isarcasm']['graph']['adj-dev'], args.nprocs)},
+            {'func': generate_adj_data_from_grounded_concepts__use_LM, 'args': (output_paths['isarcasm']['grounded']['test'], output_paths['cpnet']['pruned-graph'], output_paths['cpnet']['vocab'], output_paths['isarcasm']['graph']['adj-test'], args.nprocs)},
         ],
     }
 

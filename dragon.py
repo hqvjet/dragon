@@ -42,6 +42,10 @@ def load_data(args, devices, kg):
     torch.manual_seed(_seed)
     if torch.cuda.is_available() and args.cuda:
         torch.cuda.manual_seed(_seed)
+        torch.cuda.manual_seed_all(_seed)  # for multi-GPU
+        # Set cudnn for reproducibility
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
 
     #########################################################
     # Construct the dataset

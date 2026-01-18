@@ -8,3 +8,5 @@ wandb
 models
 
 data_preprocessed*
+venv
+__pycache__/
